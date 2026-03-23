@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auth Test — /api/auth/login</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0d0f;
+      --surface:   #111417;
+      --border:    #1e2228;
+      --accent:    #00e5a0;
+      --accent2:   #0af;
+      --danger:    #ff4d6d;
+      --text:      #e2e8f0;
+      --muted:     #4a5568;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+              linear-gradient(rgba(0,229,160,.04) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,229,160,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blobs */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,160,.07) 0%, transparent 70%);
+      top: -200px; right: -200px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob2 {
+      position: fixed;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,170,255,.06) 0%, transparent 70%);
+      bottom: -150px; left: -150px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(0,229,160,.05), 0 32px 64px rgba(0,0,0,.5);
+    }
+
+    .card-header {
+      padding: 1.5rem 1.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: .25rem .6rem;
+      border-radius: 4px;
+      background: rgba(0,229,160,.12);
+      color: var(--accent);
+      border: 1px solid rgba(0,229,160,.25);
+    }
+
+    .badge.post { background: rgba(255,170,0,.1); color: #ffaa00; border-color: rgba(255,170,0,.25); }
+
+    .endpoint-path {
+      font-family: var(--mono);
+      font-size: .85rem;
+      color: var(--text);
+      opacity: .7;
+    }
+
+    .card-title {
+      font-family: var(--sans);
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      padding: 1.5rem 1.75rem .25rem;
+    }
+
+    .card-subtitle {
+      font-size: .75rem;
+      color: var(--muted);
+      padding: 0 1.75rem 1.5rem;
+      letter-spacing: .02em;
+    }
+
+    .card-subtitle a {
+      color: var(--accent2);
+      text-decoration: none;
+    }
+
+    .form-body {
+      padding: 0 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .45rem;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .7rem 1rem;
+      font-family: var(--mono);
+      font-size: .875rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,160,.1);
+    }
+
+    .input-wrap input::placeholder { color: var(--muted); }
+
+    /* URL field */
+    .url-field {
+      display: flex;
+      gap: .5rem;
+      align-items: stretch;
+    }
+
+    .url-field input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .7rem 1rem;
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .url-field input:focus { border-color: var(--accent2); }
+
+    .url-toggle {
+      display: flex;
+      gap: .35rem;
+      flex-shrink: 0;
+    }
+
+    .url-toggle button {
+      padding: .4rem .75rem;
+      font-family: var(--mono);
+      font-size: .7rem;
+      font-weight: 600;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+
+    .url-toggle button.active {
+      background: rgba(0,170,255,.12);
+      color: var(--accent2);
+      border-color: rgba(0,170,255,.3);
+    }
+
+    .hint {
+      font-size: .68rem;
+      color: var(--muted);
+      margin-top: .35rem;
+      letter-spacing: .02em;
+    }
+
+    .hint code {
+      color: var(--accent2);
+      background: rgba(0,170,255,.08);
+      padding: .1rem .3rem;
+      border-radius: 3px;
+    }
+
+    .send-btn {
+      width: 100%;
+      padding: .85rem;
+      border: none;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #0b0d0f;
+      font-family: var(--mono);
+      font-size: .875rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      cursor: pointer;
+      transition: all .2s;
+      margin-top: .25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+
+    .send-btn:hover { background: #00ffb3; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,229,160,.25); }
+    .send-btn:active { transform: translateY(0); }
+    .send-btn.loading { opacity: .7; pointer-events: none; }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+    .send-btn.loading .spinner { display: block; }
+    .send-btn.loading .btn-label::after { content: '...'; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Response panel */
+    .response-panel {
+      margin: 0 1.75rem 1.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none;
+      animation: slideIn .25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .response-panel.visible { display: block; }
+
+    .resp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .6rem 1rem;
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .resp-title {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .status-pill {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .2rem .6rem;
+      border-radius: 20px;
+      letter-spacing: .05em;
+    }
+
+    .status-pill.ok   { background: rgba(0,229,160,.15); color: var(--accent); }
+    .status-pill.err  { background: rgba(255,77,109,.15); color: var(--danger); }
+    .status-pill.warn { background: rgba(255,170,0,.12);  color: #ffaa00; }
+
+    .resp-body {
+      padding: 1rem;
+      font-size: .8rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .resp-body.ok   { color: var(--accent); }
+    .resp-body.err  { color: var(--danger); }
+    .resp-body.warn { color: #ffaa00; }
+
+    /* TLS note */
+    .tls-note {
+      margin: 0 1.75rem 1.75rem;
+      padding: .75rem 1rem;
+      border-radius: 6px;
+      background: rgba(255,170,0,.06);
+      border: 1px solid rgba(255,170,0,.15);
+      font-size: .72rem;
+      color: #c4a000;
+      line-height: 1.6;
+    }
+
+    .tls-note strong { color: #ffaa00; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 1.75rem .25rem;
+    }
+
+    .section-label {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 1.25rem 1.75rem .6rem;
+    }
+  </style>
+</head>
+<body>
+<div class="blob2"></div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="badge post">POST</span>
+    <span class="endpoint-path">/api/auth/login</span>
+  </div>
+
+  <div class="card-title">Auth Test Client</div>
+  <div class="card-subtitle">
+    Spring Boot · TLS · <a href="https://labtdsecristian.duckdns.org" target="_blank">labtdsecristian.duckdns.org</a>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Target URL</div>
+
+  <div class="form-body" style="padding-top:0">
+    <div class="field">
+      <div class="url-field">
+        <input type="text" id="url" value="https://localhost:8443/api/auth/login" spellcheck="false"/>
+        <div class="url-toggle">
+          <button onclick="setUrl('local')" class="active" id="btn-local">localhost</button>
+          <button onclick="setUrl('prod')"  id="btn-prod">prod</button>
+        </div>
+      </div>
+      <div class="hint">
+        Prod: <code>https://labtdsecristian.duckdns.org/api/auth/login</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Credentials</div>
+
+  <div class="form-body" style="padding-top:0">
+    <div class="field">
+      <label>Username</label>
+      <div class="input-wrap">
+        <input type="text" id="username" placeholder="admin" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="input-wrap">
+        <input type="password" id="password" placeholder="••••••••" autocomplete="off"/>
+      </div>
+    </div>
+
+    <button class="send-btn" id="sendBtn" onclick="sendLogin()">
+      <div class="spinner"></div>
+      <span class="btn-label">Send Request</span>
+    </button>
+  </div>
+
+  <div class="tls-note" id="tlsNote">
+    <strong>⚠ localhost TLS</strong> — Si el backend usa un certificado autofirmado en
+    <code>https://localhost:8443</code>, el navegador bloqueará la petición (CORS + cert).
+    Abre <a href="https://localhost:8443" target="_blank" style="color:#ffaa00">https://localhost:8443</a>
+    primero, acepta la excepción de seguridad y vuelve aquí.
+  </div>
+
+  <div class="response-panel" id="responsePanel">
+    <div class="resp-header">
+      <span class="resp-title">Response</span>
+      <span class="status-pill" id="statusPill">—</span>
+    </div>
+    <pre class="resp-body" id="respBody"></pre>
+  </div>
+</div>
+
+<script>
+  const URLS = {
+    local: 'https://ec2-54-167-60-31.compute-1.amazonaws.com:42000/api/auth/login',
+    prod:  'https://labtdsecristian.duckdns.org/api/auth/login',
+  };
+
+  function setUrl(key) {
+    document.getElementById('url').value = URLS[key];
+    document.getElementById('btn-local').classList.toggle('active', key === 'local');
+    document.getElementById('btn-prod').classList.toggle('active', key === 'prod');
+    document.getElementById('tlsNote').style.display = key === 'local' ? '' : 'none';
+  }
+
+  async function sendLogin() {
+    const url      = document.getElementById('url').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('sendBtn');
+    const panel    = document.getElementById('responsePanel');
+    const pill     = document.getElementById('statusPill');
+    const body     = document.getElementById('respBody');
+
+    if (!username || !password) {
+      showResponse('warn', '400', '⚠ Completa usuario y contraseña antes de enviar.');
+      return;
+    }
+
+    btn.classList.add('loading');
+    panel.classList.remove('visible');
+
+    const payload = { username, password };
+
+    try {
+      const res = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      let text = await res.text();
+      let pretty = text;
+      try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch(_) {}
+
+      const cls = res.ok ? 'ok' : 'err';
+      showResponse(cls, `${res.status} ${res.statusText}`, pretty);
+
+    } catch (err) {
+      const msg = err.message.includes('Failed to fetch')
+              ? `❌ fetch() falló.\n\nPosibles causas:\n• Certificado autofirmado no aceptado → abre https://localhost:8443 en el navegador y acepta la excepción.\n• El backend no está corriendo.\n• CORS no configurado.\n\nError original: ${err.message}`
+              : `❌ ${err.message}`;
+      showResponse('err', 'Network Error', msg);
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+
+  function showResponse(cls, status, text) {
+    const panel = document.getElementById('responsePanel');
+    const pill  = document.getElementById('statusPill');
+    const body  = document.getElementById('respBody');
+
+    pill.textContent = status;
+    pill.className   = `status-pill ${cls}`;
+    body.textContent = text;
+    body.className   = `resp-body ${cls}`;
+    panel.classList.add('visible');
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.target.id === 'username' || e.target.id === 'password')) {
+      sendLogin();
+    }
+  });
+</script>
+</body>
+</html>
